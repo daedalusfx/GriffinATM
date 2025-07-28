@@ -1,47 +1,44 @@
-name: Publish
 
+# این یک ورک‌فلو واحد برای تست، ساخت و انتشار برنامه است
+
+name: Build and Publish
+
+# این ورک‌فلو در هر پوش به برنچ اصلی یا هر پول رکوئست اجرا می‌شود
 on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
-  publish:
-    # To enable auto publishing to github, update your electron publisher
-    # config in package.json > "build" and remove the conditional below
-    if: ${{ github.repository_owner == 'electron-react-boilerplate' }}
-
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [macos-latest]
+  build-and-release:
+    # از آخرین نسخه اوبونتو برای اجرای جاب استفاده می‌کنیم
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout git repo
-        uses: actions/checkout@v3
+      # مرحله ۱: کد پروژه را از مخزن گیت دریافت می‌کند
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Install Node and NPM
-        uses: actions/setup-node@v3
+      # مرحله ۲: نود و npm را نصب می‌کند و از کش برای سرعت بیشتر استفاده می‌کند
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 20 # استفاده از نسخه پایدار نود
+          cache: 'npm'
 
-      - name: Install and build
-        run: |
-          npm install
-          npm run postinstall
-          npm run build
+      # مرحله ۳: پکیج‌ها را با استفاده از فایل قفل نصب می‌کند
+      # npm ci سریع‌تر و امن‌تر از npm install برای محیط‌های CI است
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Publish releases
-        env:
-          # The APPLE_* values are used for auto updates signing
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASS }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          # This is used for uploading release assets to github
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npm exec electron-builder -- --publish always --win --mac --linux
+      # مرحله ۵: برنامه را برای تمام پلتفرم‌ها پکیج می‌کند
+      - name: Build and package application
+        run: npm run package
+
+      # مرحله ۶: برنامه را فقط زمانی منتشر می‌کند که یک پوش به برنچ main زده شود
+      # این مرحله در پول رکوئست‌ها اجرا نمی‌شود
+      - name: Publish to GitHub Releases
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: npm exec electron-builder -- --publish always --win --mac --linux
+
