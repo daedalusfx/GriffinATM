@@ -8,7 +8,7 @@
 
 ---
 
-![Logo](/screenshots/logo.png)
+![Logo](/assets/icon.jpg)
 
 
 ![Preview](/screenshots/preview.png)
